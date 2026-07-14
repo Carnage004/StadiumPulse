@@ -207,7 +207,13 @@ Write a concise operations briefing paragraph with recommended actions right now
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.5, maxOutputTokens: 200 }
+        generationConfig: {
+          temperature: 0.5,
+          maxOutputTokens: 2048,
+          thinkingConfig: {
+            thinkingBudget: 0
+          }
+        }
       })
     });
 

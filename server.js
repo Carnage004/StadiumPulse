@@ -15,10 +15,21 @@ app.post('/api/chat', async (req, res) => {
   try {
     const makeGeminiRequest = async (model) => {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+      
+      // Build request body with high output token allowance and disabled thinking model configurations
+      const payload = { ...req.body };
+      payload.generationConfig = {
+        ...(payload.generationConfig || {}),
+        maxOutputTokens: 2048,
+        thinkingConfig: {
+          thinkingBudget: 0
+        }
+      };
+
       return await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
+        body: JSON.stringify(payload)
       });
     };
 

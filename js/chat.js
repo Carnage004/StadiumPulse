@@ -391,7 +391,13 @@ async function getAIResponse(userMessage) {
       body: JSON.stringify({
         contents: apiContents,
         systemInstruction: { parts: [{ text: sysInstruction }] },
-        generationConfig: { temperature: 0.4, maxOutputTokens: 250 }
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 2048,
+          thinkingConfig: {
+            thinkingBudget: 0
+          }
+        }
       })
     });
   };

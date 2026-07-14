@@ -22,12 +22,22 @@ app.post('/api/chat', async (req, res) => {
       });
     };
 
-    let response = await makeGeminiRequest(PRIMARY_MODEL);
+    const fetchWithRetry = async (model) => {
+      let resVal = await makeGeminiRequest(model);
+      if (resVal.status === 503 || resVal.status === 429) {
+        console.warn(`Model ${model} returned status ${resVal.status}. Retrying in 7 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 7000));
+        resVal = await makeGeminiRequest(model);
+      }
+      return resVal;
+    };
+
+    let response = await fetchWithRetry(PRIMARY_MODEL);
 
     // If primary model returns 404 (model not found/available), retry with fallback model
     if (response.status === 404) {
       console.warn(`Primary model ${PRIMARY_MODEL} returned 404. Retrying with fallback model ${FALLBACK_MODEL}...`);
-      response = await makeGeminiRequest(FALLBACK_MODEL);
+      response = await fetchWithRetry(FALLBACK_MODEL);
       if (response.ok) {
         console.log(`Successfully used fallback model: ${FALLBACK_MODEL}`);
       }
@@ -37,11 +47,23 @@ app.post('/api/chat', async (req, res) => {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error('Gemini API error:', response.status, errorBody);
-      return res.status(response.status).json({ error: errorBody });
+      console.error('Gemini API error after retry:', response.status, errorBody);
+      // Return a friendly JSON response instead of crashing or triggering default greeting
+      return res.json({
+        candidates: [{
+          content: {
+            parts: [{
+              text: "The assistant is a bit busy right now — please try again in a moment."
+            }]
+          }
+        }]
+      });
     }
 
-    const data = await response.json();
+    const rawResponseText = await response.text();
+    console.log("RAW GEMINI RESPONSE:", rawResponseText);
+
+    const data = JSON.parse(rawResponseText);
     res.json(data);
   } catch (err) {
     console.error('Proxy error:', err.message, err.stack);
